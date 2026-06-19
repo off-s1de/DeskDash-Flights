@@ -58,6 +58,18 @@ export default async function handler(req, res) {
     const log = {
       creds_set: !!(process.env.OPENSKY_CLIENT_ID && process.env.OPENSKY_CLIENT_SECRET),
     };
+
+    // sanity check: can we reach the internet at all from this function?
+    try {
+      const t = Date.now();
+      const sanity = await fetch('https://api.github.com');
+      log.sanity_check_ms = Date.now() - t;
+      log.sanity_check_status = sanity.status;
+    } catch (e) {
+      log.sanity_check_error = e.message;
+      log.sanity_check_cause = e.cause ? String(e.cause) : null;
+    }
+
     try {
       const t0 = Date.now();
       const token = await getOpenSkyToken();
@@ -74,6 +86,9 @@ export default async function handler(req, res) {
       log.states_length = Array.isArray(raw.states) ? raw.states.length : raw.states;
     } catch (e) {
       log.error = e.message;
+      log.error_cause = e.cause ? String(e.cause) : null;
+      log.error_code  = e.cause && e.cause.code ? e.cause.code : null;
+      log.error_stack = e.stack ? e.stack.split('\n').slice(0,4) : null;
     }
     res.status(200).json(log);
     return;
